@@ -1,0 +1,10 @@
+Package: extend-ubuntu-iso
+Version: 0.1
+Source: extend-ubuntu-iso
+Maintainer: Kai Doernemann <kai@doernemann.net>
+Section: misc
+Priority: optional
+Architecture: all
+Depends: bash (>= 3.0.0)
+Description: add or remove deb packages to an existing ISO
+ extend or downsize any ubuntu image
