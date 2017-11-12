@@ -1,0 +1,5 @@
+extend-ubuntu-iso (0.1) UNRELEASED; urgency=medium
+
+  * Initial release.
+
+ -- Kai Doernemann <kai@doernemann.net>  Sun, 12 Nov 2017 16:28:30 +0100
