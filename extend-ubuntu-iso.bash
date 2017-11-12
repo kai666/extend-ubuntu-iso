@@ -53,10 +53,12 @@ extend ubunto ISO cd with a list of deb format packages
 which will be available at boot time.
 
 options:
-	-a <cmd>		execute command inside chroot env, after apt
-	-b <cmd>		execute command inside chroot env, before apt
+	-A <cmd>		execute command inside chroot env, after apt
+	-B <cmd>		execute command inside chroot env, before apt
 	-d			call shell inside chroot after apt and -a
 	-h			show this help
+	-R <repository>		add repository type, e.g. 'universe'
+				multiple occurrences allowed
 	-v			show version number
 	-x inside_chroot	internal use, call myself inside_chroot
 " >&2
@@ -93,6 +95,10 @@ function inside_chroot () {
 
 	cd /tmp/extend-ubuntu
 	[ -x ./chroot-before ] && ./chroot-before
+
+	for repo in $DO_REPO; do
+		apt-add-repository "$repo"
+	done
 
 	$DO_UPDATE	&& apt-get -y update
 	$DO_UPGRADE	&& apt-get -y upgrade
@@ -149,15 +155,17 @@ DO_DEBUG=false
 DO_EXECUTE=""		# execute 'inside_chroot'?
 DO_AFTER=""		# script to run after operations inside_chroot
 DO_BEFORE=""		# script to run before operations inside_chroot
-while getopts ":hx:a:b:dv" opt; do
+DO_REPOS=""		# add these repos before installing .deb packages
+while getopts ":hx:A:B:dR:v" opt; do
 	case "${opt}" in
 	"h")	usage ;;
 	"x")	DO_EXECUTE="${OPTARG}"
 		[ "$DO_EXECUTE" != "inside_chroot" ] && die "only option: -x inside_chroot"
 		;;
-	"a")	DO_AFTER="${OPTARG}"	;;
-	"b")	DO_BEFORE="${OPTARG}"	;;
+	"A")	DO_AFTER="${OPTARG}"	;;
+	"B")	DO_BEFORE="${OPTARG}"	;;
 	"d")	DO_DEBUG=true		;;
+	"R")	DO_REPO="${DO_REPO} ${OPTARG}" ;;
 	"v")	cat /usr/share/extend-ubuntu-iso/gitref 2>/dev/null || cat ./gitref
 		exit  0
 		;;
