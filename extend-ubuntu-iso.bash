@@ -85,6 +85,17 @@ function require () {
 		[ -x "$x" ] || die "cannot execute '$x'"
 	done
 }
+function apt_add_repo () {
+	local _repos="$@"
+
+	if type apt-add-repository 1>/dev/null 2>/dev/null; then
+		for repo in ${_repos}; do
+			apt-add-repository "$repo"
+		done
+	else
+		sed -i.bak -e "s/\bmain\b/main ${_repos}/g" /etc/apt/sources.list
+	fi
+}
 function inside_chroot () {
 	# I'm root here!
 	export HOME=/root
@@ -93,12 +104,13 @@ function inside_chroot () {
 	mount -t sysfs  none /sys
 	mount -t devpts none /dev/pts
 
+	mv /etc/resolv.conf /etc/resolv.conf.orig
+
 	cd /tmp/extend-ubuntu
+	cp resolv.conf /etc/
 	[ -x ./chroot-before ] && ./chroot-before
 
-	for repo in $DO_REPO; do
-		apt-add-repository "$repo"
-	done
+	[ -n "$DO_REPO" ] && apt_add_repo "$DO_REPO"
 
 	$DO_UPDATE	&& apt-get -y update
 	$DO_UPGRADE	&& apt-get -y upgrade
@@ -130,6 +142,8 @@ function inside_chroot () {
 	$DO_DEBUG	&& bash -i
 
 	dpkg-query -W --showformat='${Package} ${Version}\n' > /tmp/extend-ubuntu/filesystem.manifest
+
+	mv /etc/resolv.conf.orig /etc/resolv.conf
 
 	umount /dev/pts
 	umount /sys
@@ -227,6 +241,7 @@ popd
 sudo mkdir $WORKDIR/edit/tmp/extend-ubuntu
 sudo cp "$absolute_me" $WORKDIR/edit/tmp/extend-ubuntu/
 sudo cp $PACKAGES $WORKDIR/edit/tmp/extend-ubuntu/
+sudo cp /etc/resolv.conf $WORKDIR/edit/tmp/extend-ubuntu/
 [ -n "$DO_BEFORE" ] &&	sudo install -m 0755 "$DO_BEFORE" $WORKDIR/edit/tmp/extend-ubuntu/chroot-before
 [ -n "$DO_AFTER" ]  &&	sudo install -m 0755 "$DO_AFTER"  $WORKDIR/edit/tmp/extend-ubuntu/chroot-after
 
