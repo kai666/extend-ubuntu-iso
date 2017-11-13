@@ -12,3 +12,7 @@ examples:
 	$ extend-ubuntu-iso ubuntu-16.04.2-desktop-amd64.iso yourfunkypackage.deb
 	
 	$ extend-ubuntu-iso -R multiverse -R universe ubuntu-16.04.2-desktop-amd64.iso yourfunkypackage.deb
+
+upgrade the packages of  an existing cd with
+
+	$ extend-ubuntu-iso ubuntu-16.04.2-desktop-amd64.iso
