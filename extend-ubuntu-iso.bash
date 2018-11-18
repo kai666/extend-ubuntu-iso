@@ -33,6 +33,7 @@
 ###
 
 RED='\033[31m'
+GREEN='\033[32m'
 NORMAL='\033[0m'
 CALLDIR="${PWD}"
 UNIONMOUNT=""
@@ -69,7 +70,11 @@ function die () {
 	echo -e "${RED}${mini_me}: $@${NORMAL}" >&2
 	exit 2
 }
+function info () {
+	echo -e "${GREEN}${mini_me}: $@${NORMAL}"
+}
 function atexit () {
+	info "cleaning up"
 	cd /
 	if [ -n "$UNIONMOUNT" ]; then
 		sudo umount "$UNIONMOUNT"
@@ -161,6 +166,7 @@ function inside_chroot () {
 ###
 SAVE_ARGS=("$@")
 [ $# -lt 1 ] && usage
+# inherit -x-option when calling bash inside this script
 case $- in
 	*x*) USE_X="-x";;
 	  *) USE_X=;;
@@ -216,12 +222,12 @@ done
 
 # sudo apt install squashfs-tools genisoimage xorriso
 
-# mount iso readable
+info "mount iso readable"
 trap atexit 1 2 9 15
 ISOMOUNT=`mktemp -d /tmp/tmp.exubXXXXXX`
 sudo mount -o loop,ro "$ISO" "$ISOMOUNT"
 
-# unsquash root fs
+info "unsquash root fs"
 WORKDIR=`mktemp -d /tmp/tmp.exubXXXXXX`
 pushd "$WORKDIR"
 SQUASHSOURCE=""
@@ -237,7 +243,7 @@ sudo unsquashfs $SQUASHSOURCE
 sudo mv squashfs-root edit
 popd
 
-# setup chroot environment
+info "setup chroot environment"
 # WARNING: If you do this in 14.04 LTS, you will lose network connectivity
 # (name resolving part of it). /etc/resolv.conf is and should remain a symlink
 # to /run/resolvconf/resolv.conf nowadays. To enable name resolving,
@@ -257,11 +263,11 @@ sudo cp /etc/resolv.conf $wete/
 sudo mount --bind /run/ $WORKDIR/edit/run
 sudo mount --bind /dev/ $WORKDIR/edit/dev
 
-# do the work inside the chroot
+info "do the work inside the chroot"
 sudo chroot $WORKDIR/edit bash $USE_X /tmp/extend-ubuntu/$mini_me \
 	-x inside_chroot "${SAVE_ARGS[@]}"
 
-# return from chroot here...
+info "return from chroot here..."
 sudo umount $WORKDIR/edit/dev
 sudo umount $WORKDIR/edit/run
 
@@ -269,10 +275,10 @@ sudo umount $WORKDIR/edit/run
 # rebuilding CD
 sudo mv $wete/filesystem.manifest $WORKDIR/
 
-# cleanup tmp inside squashfs area
+info "cleanup tmp inside squashfs area"
 sudo /bin/rm -rf $wete/
 
-# generate new squashfs
+info "generate new squashfs"
 # XXX: this has to be generated for the kernel on the CD.
 # Also, the squashfs has to be generated using a version of mksquashfs that
 # is compatible with the kernel used on the CD you are customizing.
@@ -281,10 +287,10 @@ sudo /bin/rm -rf $wete/
 sudo mksquashfs $WORKDIR/edit $WORKDIR/filesystem.squashfs
 sudo du -sx --block-size=1 $WORKDIR/edit | cut -f1 > $WORKDIR/filesystem.size
 
-# delete edited squashfs filesystem source
+info "delete edited squashfs filesystem source"
 sudo /bin/rm -rf edit
 
-# copy CD contents, create new tree in $WORKDIR/newcd
+info "copy CD contents, create new tree in $WORKDIR/newcd"
 mkdir $WORKDIR/newcd
 
 if true; then
@@ -304,7 +310,7 @@ sudo mv $WORKDIR/filesystem.* "`dirname $SQUASHTARGET`/"
 sudo rm md5sum.txt
 sudo bash -c "find . -type f -print0 | xargs -0 md5sum | grep -v isolinux/boot.cat | tee md5sum.txt"
 
-# create new ISO
+info "create new ISO $OUTPUT_ISO"
 # set -- Volume id: Ubuntu 14.04.5 LTS amd64
 set -- `isoinfo -d -i "$ISO" | grep -i "volume id:"`
 shift
@@ -329,7 +335,7 @@ xorriso -as mkisofs \
 	-o "$OUTPUT_ISO" .
 
 if [ -n "$DO_USB" ]; then
-	# extract ISO to directory
+	info "extract ISO to directory $DO_USB"
 	7z x "$OUTPUT_ISO" -o"$DO_USB/"
 
 	# mark partition bootable
@@ -337,8 +343,8 @@ if [ -n "$DO_USB" ]; then
 	drvpartno="$1"
 	drive="${drvpartno%[0-9]*}"		# extract drive
 	partno="${drvpartno//[!0-9]/}"		# extract number
-	echo -n "now make it bootable: "
-	sudo parted $drive set $partno boot on && echo ok || echo fail
+	info "mark $drive partition $partno as bootable"
+	sudo parted $drive set $partno boot on
 fi
 
 atexit
