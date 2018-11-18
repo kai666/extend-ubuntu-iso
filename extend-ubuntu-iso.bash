@@ -238,12 +238,13 @@ popd
 # temporarily edit that file instead. If you need the network connection
 # within chroot
 
-sudo mkdir $WORKDIR/edit/tmp/extend-ubuntu
-sudo cp "$absolute_me" $WORKDIR/edit/tmp/extend-ubuntu/
-sudo cp $PACKAGES $WORKDIR/edit/tmp/extend-ubuntu/
-sudo cp /etc/resolv.conf $WORKDIR/edit/tmp/extend-ubuntu/
-[ -n "$DO_BEFORE" ] &&	sudo install -m 0755 "$DO_BEFORE" $WORKDIR/edit/tmp/extend-ubuntu/chroot-before
-[ -n "$DO_AFTER" ]  &&	sudo install -m 0755 "$DO_AFTER"  $WORKDIR/edit/tmp/extend-ubuntu/chroot-after
+wete="$WORKDIR/edit/tmp/extend-ubuntu"
+sudo mkdir $wete
+sudo cp "$absolute_me" $wete/
+sudo cp /etc/resolv.conf $wete/
+[ -n "$PACKAGES" ]  && sudo cp $PACKAGES $wete/
+[ -n "$DO_BEFORE" ] && sudo install -m 0755 "$DO_BEFORE" $wete/chroot-before
+[ -n "$DO_AFTER" ]  && sudo install -m 0755 "$DO_AFTER"  $wete/chroot-after
 
 #sudo cp /etc/resolv.conf edit/etc/
 # XXX: -o ro not working here because deb-packages possibly trigger makedev etc.
@@ -260,10 +261,10 @@ sudo umount $WORKDIR/edit/run
 
 # filesystem.manifest was generated inside chroot, we need it for
 # rebuilding CD
-sudo mv $WORKDIR/edit/tmp/extend-ubuntu/filesystem.manifest $WORKDIR/
+sudo mv $wete/filesystem.manifest $WORKDIR/
 
 # cleanup tmp inside squashfs area
-sudo /bin/rm -rf $WORKDIR/edit/tmp/extend-ubuntu/
+sudo /bin/rm -rf $wete/
 
 # generate new squashfs
 # XXX: this has to be generated for the kernel on the CD.
@@ -302,7 +303,8 @@ sudo bash -c "find . -type f -print0 | xargs -0 md5sum | grep -v isolinux/boot.c
 set -- `isoinfo -d -i $ISO | grep -i "volume id:"`
 shift
 shift
-IMAGE_NAME="$@"
+# maximum length for volid is 32 chars
+VOLID=`echo -n "$@" "customized" | cut -c -32`
 ### only? xorriso can build images with correct UEFI setup
 # read UEFI boot block from $ISO
 dd if=$ISO bs=512 count=1 of=$WORKDIR/isohdpfx.bin
@@ -317,6 +319,7 @@ xorriso -as mkisofs \
 	-e boot/grub/efi.img \
 	-no-emul-boot \
 	-isohybrid-gpt-basdat \
+	-volid "$VOLID" \
 	-o "$OUTPUT_ISO" .
 
 atexit
