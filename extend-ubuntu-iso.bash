@@ -59,6 +59,7 @@ options:
 	-h			show this help
 	-R <repository>		add repository type, e.g. 'universe'
 				multiple occurrences allowed
+	-U <pathname>		write ISO directly to USB stick mounted here
 	-v			show version number
 	-x inside_chroot	internal use, call myself inside_chroot
 " >&2
@@ -77,8 +78,11 @@ function atexit () {
 		sudo umount "$ISOMOUNT"
 		rmdir "$ISOMOUNT"
 	fi
-	sudo umount $WORKDIR/edit/dev
-	sudo umount $WORKDIR/edit/run
+	if [ -d "$WORKDIR" ]; then
+		sudo umount $WORKDIR/edit/dev
+		sudo umount $WORKDIR/edit/run
+		sudo rm -rf "$WORKDIR"
+	fi
 }
 function require () {
 	for x in $@; do
@@ -169,8 +173,9 @@ DO_DEBUG=false
 DO_EXECUTE=""		# execute 'inside_chroot'?
 DO_AFTER=""		# script to run after operations inside_chroot
 DO_BEFORE=""		# script to run before operations inside_chroot
+DO_USB=""		# write ISO to USB stick
 DO_REPOS=""		# add these repos before installing .deb packages
-while getopts ":hx:A:B:dR:v" opt; do
+while getopts ":hx:A:B:dR:U:v" opt; do
 	case "${opt}" in
 	"h")	usage ;;
 	"x")	DO_EXECUTE="${OPTARG}"
@@ -180,6 +185,7 @@ while getopts ":hx:A:B:dR:v" opt; do
 	"B")	DO_BEFORE="${OPTARG}"	;;
 	"d")	DO_DEBUG=true		;;
 	"R")	DO_REPO="${DO_REPO} ${OPTARG}" ;;
+	"U")	DO_USB="${OPTARG}"	;;
 	"v")	cat /usr/share/extend-ubuntu-iso/gitref 2>/dev/null || cat ./gitref
 		exit  0
 		;;
@@ -200,7 +206,7 @@ require "${DO_BEFORE}"
 ISO="`absolute "$1"`"
 [ -r "$ISO" ] || die "ISO file $ISO not readable or not existing"
 shift
-OUTPUT_ISO="`basename $ISO`"
+OUTPUT_ISO="`basename "$ISO"`"
 OUTPUT_ISO="${CALLDIR}/${OUTPUT_ISO%%.iso}-custom.iso"
 [ -e "$OUTPUT_ISO" ] && die "target $OUTPUT_ISO already exists - remove manually"
 PACKAGES="$@"
@@ -300,14 +306,14 @@ sudo bash -c "find . -type f -print0 | xargs -0 md5sum | grep -v isolinux/boot.c
 
 # create new ISO
 # set -- Volume id: Ubuntu 14.04.5 LTS amd64
-set -- `isoinfo -d -i $ISO | grep -i "volume id:"`
+set -- `isoinfo -d -i "$ISO" | grep -i "volume id:"`
 shift
 shift
 # maximum length for volid is 32 chars
 VOLID=`echo -n "$@" "customized" | cut -c -32`
 ### only? xorriso can build images with correct UEFI setup
 # read UEFI boot block from $ISO
-dd if=$ISO bs=512 count=1 of=$WORKDIR/isohdpfx.bin
+dd if="$ISO" bs=512 count=1 of=$WORKDIR/isohdpfx.bin
 xorriso -as mkisofs \
 	-isohybrid-mbr $WORKDIR/isohdpfx.bin \
 	-c isolinux/boot.cat \
@@ -321,6 +327,19 @@ xorriso -as mkisofs \
 	-isohybrid-gpt-basdat \
 	-volid "$VOLID" \
 	-o "$OUTPUT_ISO" .
+
+if [ -n "$DO_USB" ]; then
+	# extract ISO to directory
+	7z x "$OUTPUT_ISO" -o"$DO_USB/"
+
+	# mark partition bootable
+	set -- `df "$DO_USB" | grep '^/' | head -1`
+	drvpartno="$1"
+	drive="${drvpartno%[0-9]*}"		# extract drive
+	partno="${drvpartno//[!0-9]/}"		# extract number
+	echo -n "now make it bootable: "
+	sudo parted $drive set $partno boot on && echo ok || echo fail
+fi
 
 atexit
 
