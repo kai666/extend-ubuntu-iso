@@ -54,9 +54,12 @@ extend ubunto ISO cd with a list of deb format packages
 which will be available at boot time.
 
 options:
-	-A <cmd>		execute command inside chroot env, after apt
-	-B <cmd>		execute command inside chroot env, before apt
-	-d			call shell inside chroot after apt and -a
+	-A <cmd>		execute command inside chroot env,
+				after apt-get update/upgrade/autoremove run
+	-B <cmd>		execute command inside chroot env,
+				before apt run
+	-d			call shell inside chroot after apt run
+				and command from -A
 	-h			show this help
 	-R <repository>		add repository type, e.g. 'universe'
 				multiple occurrences allowed
