@@ -5,6 +5,6 @@ Maintainer: Kai Doernemann <kai@doernemann.net>
 Section: misc
 Priority: optional
 Architecture: all
-Depends: bash (>= 3.0.0)
+Depends: bash (>= 3.0.0), squashfs-tools, genisoimage, xorriso, p7zip, parted
 Description: add or remove deb packages to an existing ISO
  extend or downsize any ubuntu image
