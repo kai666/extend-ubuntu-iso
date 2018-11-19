@@ -228,7 +228,7 @@ done
 info "mount iso readable"
 trap atexit 1 2 9 15
 ISOMOUNT=`mktemp -d /tmp/tmp.exubXXXXXX`
-sudo mount -o loop,ro "$ISO" "$ISOMOUNT"
+sudo mount -o loop,ro "$ISO" "$ISOMOUNT" || die "cannot mount $ISO to $ISOMOUNT"
 
 info "unsquash root fs"
 WORKDIR=`mktemp -d /tmp/tmp.exubXXXXXX`
