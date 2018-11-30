@@ -50,8 +50,8 @@ mini_me=`basename $0`
 function usage () {
 	echo "$mini_me [opts] ubuntu.iso [package1.deb ... packageN.deb]
 
-extend ubunto ISO cd with a list of deb format packages
-which will be available at boot time.
+extend Ubuntu live ISO image with a list of debian format packages
+(so you can add commands to your live CD without much effort)
 
 options:
 	-A <cmd>		execute command inside chroot env,
