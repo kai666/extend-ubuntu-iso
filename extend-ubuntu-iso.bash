@@ -183,7 +183,7 @@ DO_EXECUTE=""		# execute 'inside_chroot'?
 DO_AFTER=""		# script to run after operations inside_chroot
 DO_BEFORE=""		# script to run before operations inside_chroot
 DO_USB=""		# write ISO to USB stick
-DO_REPOS=""		# add these repos before installing .deb packages
+DO_REPO=""		# add these repos before installing .deb packages
 while getopts ":hx:A:B:dR:U:v" opt; do
 	case "${opt}" in
 	"h")	usage ;;
