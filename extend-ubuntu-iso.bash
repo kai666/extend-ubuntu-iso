@@ -61,6 +61,8 @@ options:
 	-d			call shell inside chroot after apt run
 				and command from -A
 	-h			show this help
+	-O <pathname>		name of output file, default
+				is <input>-custom.iso
 	-R <repository>		add repository type, e.g. 'universe'
 				multiple occurrences allowed
 	-U <pathname>		write ISO directly to USB stick mounted here
@@ -184,7 +186,7 @@ DO_AFTER=""		# script to run after operations inside_chroot
 DO_BEFORE=""		# script to run before operations inside_chroot
 DO_USB=""		# write ISO to USB stick
 DO_REPO=""		# add these repos before installing .deb packages
-while getopts ":hx:A:B:dR:U:v" opt; do
+while getopts ":hx:A:B:dO:R:U:v" opt; do
 	case "${opt}" in
 	"h")	usage ;;
 	"x")	DO_EXECUTE="${OPTARG}"
@@ -193,6 +195,7 @@ while getopts ":hx:A:B:dR:U:v" opt; do
 	"A")	DO_AFTER="${OPTARG}"	;;
 	"B")	DO_BEFORE="${OPTARG}"	;;
 	"d")	DO_DEBUG=true		;;
+	"O")	OUTPUT_ISO="${OPTARG}"	;;
 	"R")	DO_REPO="${DO_REPO} ${OPTARG}" ;;
 	"U")	DO_USB="${OPTARG}"	;;
 	"v")	cat /usr/share/extend-ubuntu-iso/gitref 2>/dev/null || cat ./gitref
@@ -215,8 +218,10 @@ require "${DO_BEFORE}"
 ISO="`absolute "$1"`"
 [ -r "$ISO" ] || die "ISO file $ISO not readable or not existing"
 shift
-OUTPUT_ISO="`basename "$ISO"`"
-OUTPUT_ISO="${CALLDIR}/${OUTPUT_ISO%%.iso}-custom.iso"
+if [ -z "$OUTPUT_ISO" ]; then
+	OUTPUT_ISO="`basename "$ISO"`"
+	OUTPUT_ISO="${CALLDIR}/${OUTPUT_ISO%%.iso}-custom.iso"
+fi
 [ -e "$OUTPUT_ISO" ] && die "target $OUTPUT_ISO already exists - remove manually"
 PACKAGES="$@"
 for p in $PACKAGES; do
