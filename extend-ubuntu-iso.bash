@@ -195,7 +195,7 @@ while getopts ":hx:A:B:dO:R:U:v" opt; do
 	"A")	DO_AFTER="${OPTARG}"	;;
 	"B")	DO_BEFORE="${OPTARG}"	;;
 	"d")	DO_DEBUG=true		;;
-	"O")	OUTPUT_ISO="${OPTARG}"	;;
+	"O")	OUTPUT_ISO="`absolute "${OPTARG}"`"	;;
 	"R")	DO_REPO="${DO_REPO} ${OPTARG}" ;;
 	"U")	DO_USB="${OPTARG}"	;;
 	"v")	cat ./gitref 2>/dev/null || cat /usr/share/extend-ubuntu-iso/gitref
