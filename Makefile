@@ -22,7 +22,7 @@ clean:
 
 distclean: clean
 
-gitref: .git
+gitref: .git/index ${SRC}
 	git describe --abbrev=8 --dirty --always --tags > $@
 	date >> $@
 
