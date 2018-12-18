@@ -198,7 +198,7 @@ while getopts ":hx:A:B:dO:R:U:v" opt; do
 	"O")	OUTPUT_ISO="${OPTARG}"	;;
 	"R")	DO_REPO="${DO_REPO} ${OPTARG}" ;;
 	"U")	DO_USB="${OPTARG}"	;;
-	"v")	cat /usr/share/extend-ubuntu-iso/gitref 2>/dev/null || cat ./gitref
+	"v")	cat ./gitref 2>/dev/null || cat /usr/share/extend-ubuntu-iso/gitref
 		exit  0
 		;;
 	":")	die "${OPTARG} requires an argument" ;;
