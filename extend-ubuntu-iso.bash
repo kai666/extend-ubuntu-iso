@@ -58,6 +58,7 @@ options:
 				after apt-get update/upgrade/autoremove run
 	-B <cmd>		execute command inside chroot env,
 				before apt run
+	-C <pathname>		use directory as cache for APT
 	-d			call shell inside chroot after apt run
 				and command from -A
 	-h			show this help
@@ -184,9 +185,10 @@ DO_DEBUG=false
 DO_EXECUTE=""		# execute 'inside_chroot'?
 DO_AFTER=""		# script to run after operations inside_chroot
 DO_BEFORE=""		# script to run before operations inside_chroot
+DO_APTCACHE=""		# directory to use as cache dir for APT data
 DO_USB=""		# write ISO to USB stick
 DO_REPO=""		# add these repos before installing .deb packages
-while getopts ":hx:A:B:dO:R:U:v" opt; do
+while getopts ":hx:A:B:C:dO:R:U:v" opt; do
 	case "${opt}" in
 	"h")	usage ;;
 	"x")	DO_EXECUTE="${OPTARG}"
@@ -194,6 +196,7 @@ while getopts ":hx:A:B:dO:R:U:v" opt; do
 		;;
 	"A")	DO_AFTER="${OPTARG}"	;;
 	"B")	DO_BEFORE="${OPTARG}"	;;
+	"C")	DO_APTCACHE="`absolute "${OPTARG}"`"	;;
 	"d")	DO_DEBUG=true		;;
 	"O")	OUTPUT_ISO="`absolute "${OPTARG}"`"	;;
 	"R")	DO_REPO="${DO_REPO} ${OPTARG}" ;;
@@ -227,7 +230,12 @@ PACKAGES="$@"
 for p in $PACKAGES; do
 	[ -r "$p" ] || die "package $p not readable or not existing"
 done
-
+if [ -n "$DO_APTCACHE" ]; then
+	[ ! -d "$DO_APTCACHE" ] && die "$DO_APTCACHE is no directory"
+	for d in "$DO_APTCACHE/var/cache/apt" "$DO_APTCACHE/var/lib/apt"; do
+		test -d "$d" || mkdir -p "$d" || die "cannot mkdir -p $d"
+	done
+fi
 # sudo apt install squashfs-tools genisoimage xorriso
 
 info "mount iso readable"
@@ -270,12 +278,21 @@ sudo cp /etc/resolv.conf $wete/
 # XXX: -o ro not working here because deb-packages possibly trigger makedev etc.
 sudo mount --bind /run/ $WORKDIR/edit/run
 sudo mount --bind /dev/ $WORKDIR/edit/dev
-
+if [ -n "$DO_APTCACHE" ]; then
+	sudo rsync -Cau $WORKDIR/edit/var/lib/apt "$DO_APTCACHE/var/lib/apt"
+	sudo rsync -Cau $WORKDIR/edit/var/cache/apt "$DO_APTCACHE/var/cache/apt"
+	sudo mount --bind "$DO_APTCACHE/var/cache/apt" $WORKDIR/edit/var/cache/apt
+	sudo mount --bind "$DO_APTCACHE/var/lib/apt" $WORKDIR/edit/var/lib/apt
+fi
 info "do the work inside the chroot"
 sudo chroot $WORKDIR/edit bash $USE_X /tmp/extend-ubuntu/$mini_me \
 	-x inside_chroot "${SAVE_ARGS[@]}"
 
 info "return from chroot here..."
+if [ -n "$DO_APTCACHE" ]; then
+	sudo umount $WORKDIR/edit/var/lib/apt
+	sudo umount $WORKDIR/edit/var/cache/apt
+fi
 sudo umount $WORKDIR/edit/dev
 sudo umount $WORKDIR/edit/run
 
